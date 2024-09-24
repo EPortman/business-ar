@@ -24,10 +24,13 @@ export interface BusinessFull {
 }
 
 export interface BusinessNano {
+  nanoID: string
   identifier: string
   legalName: string
   legalType: string
   taxId: string | null
+  nextARYear: string
+  lastARDate: string | null
 }
 
 export interface BusinessFilingTask {

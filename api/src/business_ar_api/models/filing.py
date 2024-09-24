@@ -40,6 +40,7 @@ from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import backref
 from typing import List
+import pprint
 
 from business_ar_api.common.enum import auto
 from business_ar_api.common.enum import BaseEnum
@@ -129,6 +130,7 @@ class Filing(BaseModel):
             .filter(Filing.status.in_(status))
             .order_by(Filing.filing_date.desc())
         )
+        pprint.pprint(query)
         return query.all()
 
     @classmethod

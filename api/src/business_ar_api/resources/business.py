@@ -14,6 +14,7 @@
 """API endpoints for managing business."""
 
 from http import HTTPStatus
+import pprint
 
 from business_ar_api.common.auth import jwt as _jwt
 from business_ar_api.enums.enum import Role
@@ -40,6 +41,10 @@ bp = Blueprint("business_keys", __name__, url_prefix=f"/v1/business")
 @bp.route("/token/<string:token>", methods=["GET"])
 @cross_origin(origin="*")
 def get_business_details_using_token(token):
+    print("WHYYYYYYYY")
+    current_app.logger.error(
+        "THIS WORKS THO"
+    )
     """Get business details using nano id."""
     if not token:
         return error_response("Please provide token.", HTTPStatus.BAD_REQUEST)
@@ -68,6 +73,12 @@ def get_business_details_using_token(token):
         )
         business_json["status"] = business_details_from_colin.get("business").get(
             "corpState"
+        )
+        business_json["nextARYear"] = business_details_from_colin.get("business").get(
+            "nextARYear"
+        )
+        business_json["lastARDate"] =  business_details_from_colin.get("business").get(
+            "lastArDate"
         )
         return business_json, HTTPStatus.OK
     else:
@@ -165,6 +176,8 @@ def get_tasks(identifier):
     """Returns the next pending task for a business."""
     try:
         tasks = BusinessService.get_business_pending_tasks(identifier)
+        print('GET BUSINESS PENDING TASKS')
+        pprint.pprint(tasks)
         return jsonify(tasks=tasks), HTTPStatus.OK
     except BusinessException as businessExcpetion:
         return error_response(businessExcpetion.error, businessExcpetion.status_code)

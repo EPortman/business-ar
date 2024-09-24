@@ -23,6 +23,8 @@ async function initPage () {
       if (busStore.payStatus !== 'PAID') {
         return navigateTo(localePath('/annual-report'))
       }
+      // filing was successfully submitted
+
     }
   } catch (e) {
     // go back to ar page if no filing id or error in the PUT request
@@ -53,6 +55,8 @@ if (import.meta.client) {
       ]"
     />
     <SbcNuxtContentCard id="submitted-success-text" route-suffix="/success-text" />
+    <!-- <SbcFileAnotherReport /> -->
+    <h2>SECOND</h2>
     <SbcNuxtContentCard id="submitted-platform-info" route-suffix="/platform-info" />
   </div>
 </template>

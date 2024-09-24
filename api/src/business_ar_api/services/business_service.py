@@ -84,6 +84,8 @@ class BusinessService:
             business_details["business"]["nextARYear"] = (
                 BusinessService._get_next_ar_year(business_details)
             )
+            print("SET THE NEXT AR YEAR IN GET BUSINESS DETAILS FROM COLIN")
+            print('SET IT TO', business_details["business"]["nextARYear"])
 
         if "businessNumber" in business_details.get("business"):
             business_details["business"]["taxId"] = business_details["business"][
@@ -165,12 +167,17 @@ class BusinessService:
         founding_date_string = business_details.get("business", {}).get(
             "foundingDate", None
         )
+        print(f'LAST AR DATE: {last_ar_date_string}')
+        print(f'FOUNDING DATE: {founding_date_string}')
         if last_ar_date_string:
+            print('NO LAST AR DATE')
             last_ar_date = datetime.strptime(last_ar_date_string, "%Y-%m-%d")
             next_ar_year = last_ar_date.year + 1
         elif founding_date_string:
+            print('THERE IS A FOUNDING DATE')
             founding_date: date = datetime.fromisoformat(founding_date_string).date()
             next_ar_year = founding_date.year + 1
+            print('NEXT AR YEAR IS', next_ar_year)
         return next_ar_year
 
     @classmethod

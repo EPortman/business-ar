@@ -116,6 +116,7 @@ async function submitAnnualReport (event: FormSubmitEvent<any>) {
     // submit filing
     const { paymentToken, filingId, payStatus } = await arStore.submitAnnualReportFiling(arFiling)
     if (payStatus === 'PAID') { // redirect to final page if payStatus comes back as paid (PAD accounts)
+      busStore.completedARYears
       return navigateTo(localePath(`/submitted?filing_id=${filingId}`))
     } else {
       // redirect to pay with the returned token and filing id

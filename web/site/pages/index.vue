@@ -36,7 +36,7 @@ async function initPage () {
     }
     pageLoading.value = true
     alertStore.$reset()
-    // get business task is user is logged in (user was redirected after keycloak login)
+    // get business task if user is logged in (user was redirected after keycloak login)
     if ($keycloak.authenticated) {
       await accountStore.updateUserProfile()
       if (route.query.nanoid) { // load new business details if user already logged in and provides a new nano id
@@ -66,11 +66,15 @@ async function initPage () {
       } else { // user is authenticated but theres no existing filing, continue normal flow
         return navigateTo(localePath('/accounts/choose-existing'))
       }
-    } else if (!$keycloak.authenticated && route.query.nanoid) {
+    } else if (!$keycloak.authenticated && (route.query.nanoid || Object.keys(busStore.businessNano).length > 0)) {
       // load business details if valid nano id and no user logged in (fresh start of flow)
-      await busStore.getBusinessByNanoId(route.query.nanoid as string)
+      console.log('SHOULD GO HERE')
+      const nanoId = route.query.nanoid as string || busStore.businessNano.nanoID; 
+      await busStore.getBusinessByNanoId(nanoId);
       pageLoading.value = false // only set false if not navigating to new page
+      console.log('WHERE IS THE ERROR COMING FROM?')
     } else { // throw error if no valid nano id
+      console.log('DAMN IT')
       alertStore.addAlert({
         severity: 'error',
         category: AlertCategory.MISSING_TOKEN
@@ -81,6 +85,10 @@ async function initPage () {
     console.error((e as Error).message)
     pageLoading.value = false
   }
+}
+
+const handleLogin = () => {
+  keycloak.login()
 }
 
 // init page in setup lifecycle
@@ -121,6 +129,10 @@ if (import.meta.client) {
             { label: $t('labels.corpNum'), value: busStore.businessNano.identifier },
             { label: $t('labels.busNum'), value: busStore.businessNano.taxId ? `${busStore.businessNano.taxId.slice(0, 9)} ${busStore.businessNano.taxId.slice(9)}` : null },
           ]"
+          :nextARYear="busStore.businessNano.nextARYear"
+          :lastARDate="busStore.businessNano.lastARDate"
+          :is-authenticated="keycloak.isAuthenticated()"
+          @login="handleLogin"
         />
       </UCard>
     </ClientOnly>

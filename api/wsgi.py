@@ -14,6 +14,10 @@
 """Provides the WSGI entry point for running the application
 """
 import os
+import sys
+
+# Add the src directory to the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 from business_ar_api import create_app, db
 from flask_migrate import Migrate 
@@ -23,4 +27,4 @@ migrate = Migrate(app, db)
 
 if __name__ == "__main__":
     server_port = os.environ.get('PORT', '8080')
-    app.run(debug=False, port=server_port, host='0.0.0.0')
+    app.run(debug=os.environ.get('FLASK_ENV') == 'development', port=server_port, host='0.0.0.0')

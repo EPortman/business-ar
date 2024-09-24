@@ -10,14 +10,20 @@ export const useBusinessStore = defineStore('bar-sbc-business-store', () => {
   const fullDetails = ref<Business>({} as Business)
   const businessNano = ref<BusinessNano>({} as BusinessNano)
   const nextArDate = ref<string>('')
+  const futureArDate = ref<string>('')
   const payStatus = ref<string | null>(null)
+  const completedARYears = ref<Array<number | null>>([]);
 
   // get basic business info by nano id
   async function getBusinessByNanoId (id: string): Promise<void> {
     try {
       const response = await useBarApi<BusinessNano>(`/business/token/${id}`)
+      console.log('getBusinessByNanoId')
+      console.log(response)
+      console.log('This needs to check both colin and business AR')
       if (response) {
         businessNano.value = response
+        businessNano.value.nanoID = id
       }
     } catch (e) {
       alertStore.addAlert({
@@ -32,6 +38,7 @@ export const useBusinessStore = defineStore('bar-sbc-business-store', () => {
   async function getFullBusinessDetails (): Promise<void> {
     try {
       const response = await useBarApi<Business>(`/business/${businessNano.value.identifier}`, {}, 'token')
+      console.log('Full Business Details:', JSON.stringify(response, null, 2));
       if (response) {
         fullDetails.value = response
       }
@@ -76,9 +83,15 @@ export const useBusinessStore = defineStore('bar-sbc-business-store', () => {
 
     // if no lastArDate, it means this is the companies first AR, so need to use founding date instead
     if (!bus.lastArDate) {
+      console.log('NO LAST AR DATE')
+      console.log('USING FOUNDING DATE INSTEAD', bus.foundingDate)
       nextArDate.value = addOneYear(bus.foundingDate)
+      futureArDate.value = addOneYear(nextArDate.value)
     } else {
+      console.log('LAST AR DATE FOUND')
+      console.log('USING LAST AR DATE ', bus.lastArDate)
       nextArDate.value = addOneYear(bus.lastArDate!)
+      futureArDate.value = addOneYear(nextArDate.value)
     }
 
     // throw error if next ar date is in the future
@@ -103,58 +116,107 @@ export const useBusinessStore = defineStore('bar-sbc-business-store', () => {
     if (response) {
       payStatus.value = response.filing.header.status
       arStore.arFiling = response
+      nextArDate.value = futureArDate.value
+      futureArDate.value = addOneYear(futureArDate.value)
     }
   }
 
   async function getBusinessTask (): Promise<{ task: string | null, taskValue: BusinessTodoTask | BusinessFilingTask | null }> {
     try {
+      console.log('Starting getBusinessTask...');
+  
+      // Make the API call and log the response
       const response = await useBarApi<BusinessTask>(
         `/business/${businessNano.value.identifier}/tasks`,
         {},
         'token',
         'Error retrieving business tasks.'
       )
-
-      await getFullBusinessDetails()
-      assignBusinessStoreValues(fullDetails.value.business)
-
-      // handle case where theres no tasks available (filings complete up to date)
+      // response.tasks[0].task.todo.business.hasFutureEffectiveFilings = false;
+      // console.log('RESPONSE')
+      // console.log(response)
+      // response.tasks[0].task.todo.business.hasFutureEffectiveFilings = false;
+      // console.log('Response from /tasks endpoint:');
+      // console.log(JSON.stringify(response, null, 2));
+  
+      // Fetching full business details and log the full details
+      await getFullBusinessDetails();
+      console.log('Full business details fetched:');
+      fullDetails.value.business.hasFutureEffectiveFilings = false
+      console.log(JSON.stringify(fullDetails.value.business, null, 2));
+  
+      // Assign business store values
+      assignBusinessStoreValues(fullDetails.value.business);
+      console.log('Business store values assigned.');
+  
+      // Handle case where no tasks are available
       if (response.tasks.length === 0) {
+        console.log('No tasks available, business filings are up to date.');
         return { task: null, taskValue: null }
       }
-
-      const taskValue = response.tasks[0].task // assign task value
-      const taskName = Object.getOwnPropertyNames(taskValue)[0] // assign task name
-
-      // assign business store values using response from task endpoint, saves having to make another call to get business details
+  
+      // Log the first task value and its name
+      const taskValue = response.tasks[0].task;
+      const taskName = Object.getOwnPropertyNames(taskValue)[0];
+      console.log('First task value:', taskValue);
+      console.log('Task name:', taskName);
+  
+      // Handle 'filing' tasks and log relevant details
       if ('filing' in taskValue) {
-        await accountStore.getAndSetAccount(taskValue.filing.header.paymentAccount)
-        // throw error if user does not own account of the in progress filing
+        console.log('Filing task detected:', taskValue.filing);
+  
+        await accountStore.getAndSetAccount(taskValue.filing.header.paymentAccount);
+        console.log('Account set for payment account:', taskValue.filing.header.paymentAccount);
+  
+        // Check account ownership and throw error if necessary
         if (!accountStore.userAccounts.some(account => account.id === parseInt(taskValue.filing.header.paymentAccount))) {
+          console.log('Access Denied: User does not own the account for the in-progress filing.');
           alertStore.addAlert({
             severity: 'error',
             category: AlertCategory.ACCOUNT_ACCESS
-          })
-          throw new Error('Access Denied: Your account does not have permission to complete this task.')
+          });
+          throw new Error('Access Denied: Your account does not have permission to complete this task.');
         }
-        // assignBusinessStoreValues(taskValue.filing.business)
-        arStore.arFiling = { filing: { header: taskValue.filing.header, annualReport: taskValue.filing.annualReport, documents: taskValue.filing.documents } }
-        payStatus.value = taskValue.filing.header.status
+  
+        // Log and assign filing details to arStore
+        arStore.arFiling = {
+          filing: {
+            header: taskValue.filing.header,
+            annualReport: taskValue.filing.annualReport,
+            documents: taskValue.filing.documents
+          }
+        };
+        console.log('Filing details assigned to arStore:', arStore.arFiling);
+  
+        // Log payment status
+        payStatus.value = taskValue.filing.header.status;
+        console.log('Payment status:', payStatus.value);
       }
-      return { task: taskName, taskValue }
+  
+      // Return the task name and task value
+      console.log('Returning task:', { task: taskName, taskValue });
+      return { task: taskName, taskValue };
+      
     } catch (e) {
-      // add general error alert if the error is not access denied
+      // Log the error before throwing it again
+      console.error('Error occurred in getBusinessTask:', e);
+  
+      // Add a general error alert if it's not an access denial issue
       if (!(e instanceof Error && e.message.includes('Access Denied'))) {
         alertStore.addAlert({
           severity: 'error',
           category: AlertCategory.BUSINESS_DETAILS
-        })
+        });
+        console.error('General error alert triggered.');
       }
-      throw e
+  
+      throw e;
     }
   }
+  
 
   function $reset () {
+    console.log("RESET CALED")
     loading.value = true
     currentBusiness.value = {} as BusinessFull
     businessNano.value = {} as BusinessNano
@@ -175,7 +237,8 @@ export const useBusinessStore = defineStore('bar-sbc-business-store', () => {
     businessNano,
     nextArDate,
     payStatus,
-    fullDetails
+    fullDetails,
+    completedARYears
   }
 },
 { persist: true } // persist store values in session storage

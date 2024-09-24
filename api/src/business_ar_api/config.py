@@ -48,7 +48,7 @@ class Config:
     Used as the base for all the other configurations.
     """
 
-    DEBUG = False
+    DEBUG = True
     TESTING = False
     CSRF_ENABLED = True
     SECRET_KEY = "this-really-needs-to-be-changed"

@@ -22,6 +22,8 @@ export const useKeycloak = () => {
 
   function logout () {
     // clear pinia stores on logout
+    console.log('I JUST LOGGED OUT')
+
     resetPiniaStores()
 
     return $keycloak.logout({
